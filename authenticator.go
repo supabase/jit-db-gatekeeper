@@ -106,7 +106,16 @@ func authApi(ctx context.Context, apiUrl, username, token string) error {
 	// giving the guarantee that the user token is still valid and permitted
 	// to  interact with the project
 
-	resp, err := http.Get(apiUrl)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", apiUrl, nil)
+	if err != nil {
+		return err
+	}
+	// set auth for API server, only bearer support for now
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Accept", "application/json")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

@@ -122,6 +122,12 @@ func pam_sm_open_session_go(pamh *C.pam_handle_t, flags C.int, argc C.int, argv 
 	return C.PAM_IGNORE
 }
 
+//export pam_sm_close_session_go
+func pam_sm_close_session_go(pamh *C.pam_handle_t, flags C.int, argc C.int, argv **C.char) C.int {
+	pamSyslog(pamh, syslog.LOG_WARNING, "CLOSE SESSION")
+	return C.PAM_IGNORE
+}
+
 //export pam_sm_acct_mgmt_go
 func pam_sm_acct_mgmt_go(pamh *C.pam_handle_t, flags C.int, argc C.int, argv **C.char) C.int {
 	// From pam_sm_acct_mgmt

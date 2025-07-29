@@ -32,6 +32,11 @@ int pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, char **argv) {
   return pam_sm_open_session_go(pamh, flags, argc, (char**)argv);
 }
 
+int pam_sm_close_session_go(pam_handle_t *pamh, int flags, int argc, char **argv);
+int pam_sm_close_session(pam_handle_t *pamh, int flags, int argc, char **argv) {
+  return pam_sm_close_session_go(pamh, flags, argc, (char**)argv);
+}
+
 // argv_i returns argv[i].
 char* argv_i(char **argv, int i) {
   return argv[i];

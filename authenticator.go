@@ -163,7 +163,7 @@ func isPermitted(ctx context.Context, username string, perms UserPermissionSet) 
 					return fmt.Errorf("could not validate expires_at: %v", err)
 				}
 				expiresAt := time.Unix(0, ms*int64(time.Millisecond))
-				if expiresAt.After(time.Now()) {
+				if expiresAt.Before(time.Now()) {
 					return fmt.Errorf("access expired at %s", role.ExpiresAt)
 				}
 			}

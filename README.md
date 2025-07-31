@@ -9,6 +9,15 @@ docker cp extract:/src/supa_jitdb_pam.so ./pam_jwt_pg.so
 docker rm extract
 ```
 
+Build with nix (using docker as a standin here for a linux host):
+
+```bash
+docker build -t nix-go-pam -f Dockerfile_nix .
+docker create --name temp nix-go-pam
+docker cp temp:/app/result/lib/security/pam_jwt_pg.so ./pam_jwt_pg_nix.so
+docker rm temp
+```
+
 ### setup on the server
 
 Copy the `.so` to the server. And add to the correct pam location, normally:

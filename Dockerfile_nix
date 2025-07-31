@@ -1,0 +1,8 @@
+FROM nixos/nix:latest
+
+WORKDIR /app
+
+COPY . .
+
+# Build using nix
+RUN nix-build

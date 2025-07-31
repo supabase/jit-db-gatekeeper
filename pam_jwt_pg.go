@@ -5,9 +5,7 @@ package main
 #cgo LDFLAGS: -lpam -fPIC
 
 #include <stdlib.h>
-#ifdef __darwin__
 #include <security/pam_appl.h>
-#endif
 #include <security/pam_modules.h>
 
 #ifdef __linux__

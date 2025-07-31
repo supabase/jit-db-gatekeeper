@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/netdata/netdata/go/plugins/plugin/go.d/pkg/iprange"
 )
 
 type AuthMethod string
@@ -168,10 +170,16 @@ func isPermitted(ctx context.Context, username string, perms UserPermissionSet) 
 			// verify any conditions that have been set on the access
 			if len(role.AllowedIps) > 0 {
 				ipAllowed := false
-				for _, ip := range role.AllowedIps {
-					// rhost is the address that postgres receives on connection
-					if ip == ctx.Value("rhost") {
-						ipAllowed = true
+				// turn rhost into an ip address
+				rHostAddr, _ := netip.ParseAddr(ctx.Value("rhost").(string))
+				// verify if in an allowed range
+				for _, r := range role.AllowedIps {
+					// turn into range
+					if ipr, err := iprange.ParseRange(r); err != nil {
+						if ipr.Contains(rHostAddr) {
+							ipAllowed = true
+							break
+						}
 					}
 				}
 				if !ipAllowed {

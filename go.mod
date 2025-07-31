@@ -1,15 +1,11 @@
 module github.com/supabase/jit-db-gatekeeper
 
-go 1.22.5
+go 1.24.0
 
-require (
-	github.com/MicahParks/keyfunc/v3 v3.4.0
-	github.com/golang-jwt/jwt/v5 v5.2.3
-	github.com/lib/pq v1.10.9
-	gopkg.in/yaml.v2 v2.4.0
-)
+toolchain go1.24.5
 
-require (
-	github.com/MicahParks/jwkset v0.8.0 // indirect
-	golang.org/x/time v0.9.0 // indirect
-)
+require github.com/lib/pq v1.10.9
+
+require github.com/netdata/netdata/go/plugins v0.0.0-00010101000000-000000000000
+
+replace github.com/netdata/netdata/go/plugins => github.com/netdata/netdata/src/go v0.0.0-20250731052924-5b9cd0ba9812

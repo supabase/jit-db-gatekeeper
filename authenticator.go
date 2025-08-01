@@ -175,7 +175,7 @@ func isPermitted(ctx context.Context, username string, perms UserPermissionSet) 
 				// verify if in an allowed range
 				for _, r := range role.AllowedIps {
 					// turn into range
-					if ipr, err := iprange.ParseRange(r); err != nil {
+					if ipr, err := iprange.ParseRange(r); err == nil {
 						if ipr.Contains(rHostAddr) {
 							ipAllowed = true
 							break

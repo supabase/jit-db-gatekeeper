@@ -1,33 +1,42 @@
 { pkgs ? import <nixpkgs> {} }:
 
-pkgs.stdenv.mkDerivation {
-  pname = "pam_jwt_pg";
-  version = "0.0.1";
+pkgs.buildGoModule {
+  pname = "jit-db-gatekeeper";
+  version = "0.1.0";
 
   src = ./.;
 
-  nativeBuildInputs = [
-    pkgs.go
+  vendorHash = "sha256-pdF+bhvZQwd2iSEHVtDAGihkYZGSaQaFdsF8MSrWuKQ=";
+
+  nativeBuildInputs = with pkgs; [
+    pkg-config
   ];
 
-  buildInputs = [
-    pkgs.pam
+  buildInputs = with pkgs; [
+    pam
   ];
 
-  CGO_ENABLED = "1";
-  GOOS = "linux";
-  GOARCH = "arm64";
-  GOPATH = "${placeholder "out"}/go"; # Prevent writing to /homeless-shelter
-  GOMODCACHE = "${placeholder "out"}/gomodcache";
+  env.CGO_ENABLED = "1";
 
+  # Build as shared library for PAM
   buildPhase = ''
-    export HOME=$PWD
-    go mod tidy
+    runHook preBuild
     go build -buildmode=c-shared -o pam_jwt_pg.so
+    runHook postBuild
   '';
 
   installPhase = ''
+    runHook preInstall
     mkdir -p $out/lib/security
     cp pam_jwt_pg.so $out/lib/security/
+    runHook postInstall
   '';
+
+  meta = with pkgs.lib; {
+    description = "PAM module for JWT authentication with PostgreSQL backend";
+    homepage = "https://github.com/supabase/jit-db-gatekeeper";
+    license = licenses.mit;
+    maintainers = [ ];
+    platforms = platforms.unix;
+  };
 }

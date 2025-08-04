@@ -121,7 +121,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 	})
 
 	t.Run("passes when access has not yet expired", func(t *testing.T) {
-		expiredAt := time.Now().AddDate(2, 0, 0).UnixMilli() // 1 year from now
+		expiredAt := time.Now().AddDate(1, 0, 0).UnixMilli() // 1 year from now
 		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "postgres", ExpiresAt: fmt.Sprintf("%d", expiredAt)}}}
 
 		mockServer := mockServer(validUser)

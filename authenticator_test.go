@@ -44,7 +44,9 @@ func TestAuthenticate_Discover(t *testing.T) {
 func mockServer(resp *UserPermissionSet) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			return
+		}
 	}))
 }
 func TestAuthenticate_authApi(t *testing.T) {
@@ -59,8 +61,9 @@ func TestAuthenticate_authApi(t *testing.T) {
 		}
 		ctx := context.Background()
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, _ := discoverAuthenticator(ctx, c, token)
-		err := auth.Authenticate(ctx, "postgres", token)
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		err = auth.Authenticate(ctx, "postgres", token)
 		assert.NoError(t, err)
 		defer mockServer.Close()
 	})
@@ -76,8 +79,9 @@ func TestAuthenticate_authApi(t *testing.T) {
 		}
 		ctx := context.Background()
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, _ := discoverAuthenticator(ctx, c, token)
-		err := auth.Authenticate(ctx, "", token)
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		err = auth.Authenticate(ctx, "", token)
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "empty username")
 		defer mockServer.Close()
@@ -94,8 +98,9 @@ func TestAuthenticate_authApi(t *testing.T) {
 		}
 		ctx := context.Background()
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, _ := discoverAuthenticator(ctx, c, token)
-		err := auth.Authenticate(ctx, "postgres", token)
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		err = auth.Authenticate(ctx, "postgres", token)
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "not permitted to assume postgres")
 		defer mockServer.Close()
@@ -113,8 +118,9 @@ func TestAuthenticate_authApi(t *testing.T) {
 		}
 		ctx := context.Background()
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, _ := discoverAuthenticator(ctx, c, token)
-		err := auth.Authenticate(ctx, "postgres", token)
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		err = auth.Authenticate(ctx, "postgres", token)
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, fmt.Sprintf("access expired at %d", expiredAt))
 		defer mockServer.Close()
@@ -132,8 +138,9 @@ func TestAuthenticate_authApi(t *testing.T) {
 		}
 		ctx := context.Background()
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, _ := discoverAuthenticator(ctx, c, token)
-		err := auth.Authenticate(ctx, "postgres", token)
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		err = auth.Authenticate(ctx, "postgres", token)
 		assert.NoError(t, err)
 		defer mockServer.Close()
 	})
@@ -148,10 +155,11 @@ func TestAuthenticate_authApi(t *testing.T) {
 			AuthAPIURL: mockServer.URL,
 		}
 		ctx := context.Background()
-		ctx = context.WithValue(ctx, "rhost", "10.0.0.2")
+		ctx = context.WithValue(ctx, rhostKey, "10.0.0.2")
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, _ := discoverAuthenticator(ctx, c, token)
-		err := auth.Authenticate(ctx, "postgres", token)
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		err = auth.Authenticate(ctx, "postgres", token)
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "access not from an allowed IP")
 		defer mockServer.Close()
@@ -167,11 +175,12 @@ func TestAuthenticate_authApi(t *testing.T) {
 			AuthAPIURL: mockServer.URL,
 		}
 		ctx := context.Background()
-		ctx = context.WithValue(ctx, "rhost", "10.8.0.2")
+		ctx = context.WithValue(ctx, rhostKey, "10.8.0.2")
 
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, _ := discoverAuthenticator(ctx, c, token)
-		err := auth.Authenticate(ctx, "postgres", token)
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		err = auth.Authenticate(ctx, "postgres", token)
 		assert.NoError(t, err)
 		defer mockServer.Close()
 	})

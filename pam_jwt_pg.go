@@ -24,6 +24,12 @@ import (
 	"unsafe"
 )
 
+type key int
+
+const (
+	rhostKey key = iota
+)
+
 func main() {
 }
 
@@ -58,7 +64,7 @@ func pam_sm_authenticate_go(pamh *C.pam_handle_t, flags C.int, argc C.int, argv 
 	// store the rhost in the context so it can be used for
 	// authz decisions later
 	rhost := C.GoString(cRhost)
-	ctx = context.WithValue(ctx, "rhost", rhost)
+	ctx = context.WithValue(ctx, rhostKey, rhost)
 
 	pamSyslog(pamh, syslog.LOG_INFO, "connection from %s", rhost)
 	// if localhost connection and configuration is to trust localhost

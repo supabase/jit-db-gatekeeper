@@ -57,7 +57,7 @@ jobs:
         env:
           CGO_ENABLED: 1
           GOOS: linux
-          GOARCH: arm64
+          # just buil x86_64 for now, will do arm for the release action
         run: |
           go mod tidy
           go build -buildmode=c-shared -o supa_jitdb_pam.so

@@ -32,21 +32,7 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.4
-  test:
-    needs: golangci
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-          show-progress: false
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
-      - run: |
-          go test -test.v
-  build:
-    needs: test
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -64,6 +50,9 @@ jobs:
             libpam0g-dev \
             curl \
             tar
+      - name: test module
+        run: |
+          go test -test.v
       - name: build module
         env:
           CGO_ENABLED: 1

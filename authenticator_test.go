@@ -58,6 +58,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 			AuthAPIURL: mockServer.URL,
 		}
 		ctx := context.Background()
+		ctx = context.WithValue(ctx, rhostKey, "10.0.0.2")
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
 		auth, err := discoverAuthenticator(ctx, c, token)
 		assert.NoError(t, err)
@@ -76,6 +77,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 			AuthAPIURL: mockServer.URL,
 		}
 		ctx := context.Background()
+		ctx = context.WithValue(ctx, rhostKey, "10.0.0.2")
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
 		auth, err := discoverAuthenticator(ctx, c, token)
 		assert.NoError(t, err)
@@ -95,6 +97,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 			AuthAPIURL: mockServer.URL,
 		}
 		ctx := context.Background()
+		ctx = context.WithValue(ctx, rhostKey, "10.0.0.2")
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
 		auth, err := discoverAuthenticator(ctx, c, token)
 		assert.NoError(t, err)

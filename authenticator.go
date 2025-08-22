@@ -171,19 +171,26 @@ func isPermitted(ctx context.Context, username string, perms UserPermissionSet) 
 			if len(role.AllowedIps) > 0 {
 				ipAllowed := false
 				// turn rhost into an ip address
-				rHostAddr, _ := netip.ParseAddr(ctx.Value("rhost").(string))
-				// verify if in an allowed range
-				for _, r := range role.AllowedIps {
-					// turn into range
-					if ipr, err := iprange.ParseRange(r); err == nil {
-						if ipr.Contains(rHostAddr) {
-							ipAllowed = true
-							break
+				if rhost, ok := ctx.Value(rhostKey).(string); !ok {
+					return fmt.Errorf("context does not have rhost")
+				} else {
+					rHostAddr, err := netip.ParseAddr(rhost)
+					if err != nil {
+						return fmt.Errorf("unexpected error parsing rhost")
+					}
+					// verify if in an allowed range
+					for _, r := range role.AllowedIps {
+						// turn into range
+						if ipr, err := iprange.ParseRange(r); err == nil {
+							if ipr.Contains(rHostAddr) {
+								ipAllowed = true
+								break
+							}
 						}
 					}
-				}
-				if !ipAllowed {
-					return fmt.Errorf("access not from an allowed IP")
+					if !ipAllowed {
+						return fmt.Errorf("access not from an allowed IP")
+					}
 				}
 			}
 

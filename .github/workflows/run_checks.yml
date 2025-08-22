@@ -1,0 +1,63 @@
+name: run-checks
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          show-progress: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: setup deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libpam0g-dev \
+            curl \
+            tar
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.4
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          show-progress: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: setup deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libpam0g-dev \
+            curl \
+            tar
+      - name: test module
+        run: |
+          go test -test.v
+      - name: build module
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          # just buil x86_64 for now, will do arm for the release action
+        run: |
+          go mod tidy
+          go build -buildmode=c-shared -o supa_jitdb_pam.so

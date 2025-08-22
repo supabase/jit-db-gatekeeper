@@ -1,19 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/netip"
-	"strconv"
 	"strings"
-	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/netdata/netdata/go/plugins/plugin/go.d/pkg/iprange"
 )
 
 type AuthMethod string
@@ -31,15 +28,24 @@ type authenticator struct {
 	ApiUrl string
 }
 
+type AuthZRequest struct {
+	Role  string `json:"role"`
+	Rhost string `json:"rhost"`
+}
 type UserPermissionSet struct {
-	UserId string      `json:"user_id"`
-	Roles  []UserRoles `json:"user_roles"`
+	UserId string   `json:"user_id"`
+	Role   UserRole `json:"user_role"`
 }
 
-type UserRoles struct {
-	Role       string   `json:"role"`
-	ExpiresAt  string   `json:"expires_at,omitempty"`
-	AllowedIps []string `json:"allowed_ips,omitempty"`
+type UserRole struct {
+	Role            string          `json:"role"`
+	ExpiresAt       string          `json:"expires_at,omitempty"`
+	AllowedNetworks AllowedNetworks `json:"allowed_networks,omitempty"`
+}
+
+type AllowedNetworks struct {
+	AllowedCidrs   []string `json:"dbAllowedCidrs,omitempty"`
+	AllowedCidrsV6 []string `json:"dbAllowedCidrsV6,omitempty"`
 }
 
 /* discoverAuthenticator uses the auth token to determine which authentication mechanism to use */
@@ -107,96 +113,65 @@ func authApi(ctx context.Context, apiUrl, username, token string) error {
 	// uses the incoming token to authenticate against the API
 	// giving the guarantee that the user token is still valid and permitted
 	// to  interact with the project
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", apiUrl, nil)
-	if err != nil {
-		return err
-	}
-	// set auth for API server, only bearer support for now
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Accept", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		// user has no authorization setup if a 406 error is returned
-		if resp.StatusCode == http.StatusNotAcceptable {
-			return fmt.Errorf("user not authorized for JIT access to database")
+	if rhost, ok := ctx.Value(rhostKey).(string); !ok {
+		return fmt.Errorf("context does not have rhost")
+	} else {
+		jsonData, err := json.Marshal(&AuthZRequest{username, rhost})
+		if err != nil {
+			panic(err)
 		}
-		// something else went wrong
-		return fmt.Errorf("failed with status: %d", resp.StatusCode)
-	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
+		client := &http.Client{}
+		req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return err
+		}
+		// set auth for API server, only bearer support for now
+		req.Header.Add("Authorization", "Bearer "+token)
+		req.Header.Add("Accept", "application/json")
 
-	var perms UserPermissionSet
-	if err := json.Unmarshal(body, &perms); err != nil {
-		return err
-	}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
 
-	// validate the user's permission
-	return isPermitted(ctx, username, perms)
+		if resp.StatusCode != http.StatusOK {
+			// user has no authorization setup if a 406 error is returned
+			if resp.StatusCode == http.StatusNotAcceptable {
+				return fmt.Errorf("user not authorized for JIT access to database")
+			}
+
+			if resp.StatusCode == http.StatusForbidden {
+				return fmt.Errorf("user not authorized due to restriction")
+			}
+			// something else went wrong
+			return fmt.Errorf("failed with status: %d", resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		var perms UserPermissionSet
+		if err := json.Unmarshal(body, &perms); err != nil {
+			return err
+		}
+
+		// validate the user's permission
+		return isPermitted(ctx, username, perms)
+	}
 }
 
 func isPermitted(ctx context.Context, username string, perms UserPermissionSet) error {
 	if username == "" {
 		return fmt.Errorf("empty username")
 	}
-	// check if the username that is being requested is in the
-	// permitted set of roles for the authenticating user
-	for _, role := range perms.Roles {
-		if role.Role == username {
-			// check that the access is within the permitted time
-			if role.ExpiresAt != "" {
-				// convert to datetime
-				ms, err := strconv.ParseInt(role.ExpiresAt, 10, 64)
-				if err != nil {
-					// fail closed
-					return fmt.Errorf("could not validate expires_at: %v", err)
-				}
-				expiresAt := time.Unix(0, ms*int64(time.Millisecond))
-				if expiresAt.Before(time.Now()) {
-					return fmt.Errorf("access expired at %s", role.ExpiresAt)
-				}
-			}
-			// verify any conditions that have been set on the access
-			if len(role.AllowedIps) > 0 {
-				ipAllowed := false
-				// turn rhost into an ip address
-				if rhost, ok := ctx.Value(rhostKey).(string); !ok {
-					return fmt.Errorf("context does not have rhost")
-				} else {
-					rHostAddr, err := netip.ParseAddr(rhost)
-					if err != nil {
-						return fmt.Errorf("unexpected error parsing rhost")
-					}
-					// verify if in an allowed range
-					for _, r := range role.AllowedIps {
-						// turn into range
-						if ipr, err := iprange.ParseRange(r); err == nil {
-							if ipr.Contains(rHostAddr) {
-								ipAllowed = true
-								break
-							}
-						}
-					}
-					if !ipAllowed {
-						return fmt.Errorf("access not from an allowed IP")
-					}
-				}
-			}
-
-			// all validation passed
-			return nil
-		}
+	// not strictly required anymore,
+	// but double check the response from the server is what we were expecting
+	if perms.Role.Role == username {
+		return nil
 	}
 	return fmt.Errorf("not permitted to assume %s", username)
 }

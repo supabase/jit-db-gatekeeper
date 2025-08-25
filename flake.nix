@@ -18,7 +18,7 @@
           pkgs = import nixpkgs { inherit system; };
         in {
           default = pkgs.stdenv.mkDerivation {
-            pname = "pam_foo";
+            pname = "gatekeeper";
             version = "0.1.0";
             src = ./.;
 
@@ -26,13 +26,12 @@
 
             # Assuming your pam module source is pam_foo.c
             buildPhase = ''
-              mkdir -p build
-              $CC -fPIC -shared pam_foo.c -o pam_foo.so -lpam
+                go build -buildmode=c-shared -o pam_jwt_pg.so
             '';
 
             installPhase = ''
               mkdir -p $out/lib/security
-              cp pam_foo.so $out/lib/security/
+              cp pam_jwt_pg.so $out/lib/security/
             '';
           };
         });

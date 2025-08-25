@@ -1,32 +1,40 @@
 {
-  description = "JIT Database Gatekeeper - PAM module for JWT authentication with PostgreSQL";
+  description = "PAM module example";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in
-      {
-        packages.default = pkgs.callPackage ./default.nix { };
+  outputs = { self, nixpkgs }:
+    let
+      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
+      forAllSystems = f: builtins.listToAttrs (map (system: {
+        name = system;
+        value = f system;
+      }) systems);
+    in {
+      packages = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in {
+          default = pkgs.stdenv.mkDerivation {
+            pname = "pam_foo";
+            version = "0.1.0";
+            src = ./.;
 
-        packages.jit-db-gatekeeper = self.packages.${system}.default;
+            buildInputs = [ pkgs.pam pkgs.gcc ];
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            go
-            pam
-            pkg-config
-          ];
+            # Assuming your pam module source is pam_foo.c
+            buildPhase = ''
+              mkdir -p build
+              $CC -fPIC -shared pam_foo.c -o pam_foo.so -lpam
+            '';
 
-          shellHook = ''
-            echo "JIT DB Gatekeeper development environment"
-            echo "Go version: $(go version)"
-          '';
-        };
-      });
+            installPhase = ''
+              mkdir -p $out/lib/security
+              cp pam_foo.so $out/lib/security/
+            '';
+          };
+        });
+    };
 }

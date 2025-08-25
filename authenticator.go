@@ -40,12 +40,12 @@ type UserPermissionSet struct {
 type UserRole struct {
 	Role            string          `json:"role"`
 	ExpiresAt       string          `json:"expires_at,omitempty"`
-	AllowedNetworks AllowedNetworks `json:"allowed_networks,omitempty"`
+	AllowedNetworks AllowedNetworks `json:"allowed_networks"`
 }
 
 type AllowedNetworks struct {
-	AllowedCidrs   []string `json:"dbAllowedCidrs,omitempty"`
-	AllowedCidrsV6 []string `json:"dbAllowedCidrsV6,omitempty"`
+	AllowedCidrs   []string `json:"allowed_cidrs,omitempty"`
+	AllowedCidrsV6 []string `json:"allowed_cidrs_v6,omitempty"`
 }
 
 /* discoverAuthenticator uses the auth token to determine which authentication mechanism to use */

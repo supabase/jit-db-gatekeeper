@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -51,7 +49,7 @@ func mockServer(resp *UserPermissionSet) *httptest.Server {
 }
 func TestAuthenticate_authApi(t *testing.T) {
 	t.Run("successful auth against Api", func(t *testing.T) {
-		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "postgres"}}}
+		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Role: UserRole{Role: "postgres"}}
 
 		mockServer := mockServer(validUser)
 		defer mockServer.Close()
@@ -60,6 +58,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 			AuthAPIURL: mockServer.URL,
 		}
 		ctx := context.Background()
+		ctx = context.WithValue(ctx, rhostKey, "10.0.0.2")
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
 		auth, err := discoverAuthenticator(ctx, c, token)
 		assert.NoError(t, err)
@@ -69,7 +68,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 	})
 
 	t.Run("empty user fails", func(t *testing.T) {
-		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "postgres"}}}
+		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Role: UserRole{Role: "postgres"}}
 
 		mockServer := mockServer(validUser)
 		defer mockServer.Close()
@@ -78,6 +77,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 			AuthAPIURL: mockServer.URL,
 		}
 		ctx := context.Background()
+		ctx = context.WithValue(ctx, rhostKey, "10.0.0.2")
 		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
 		auth, err := discoverAuthenticator(ctx, c, token)
 		assert.NoError(t, err)
@@ -88,65 +88,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 	})
 
 	t.Run("fails when user is not permitted for requested role", func(t *testing.T) {
-		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "supabase_read_only_user"}}}
-
-		mockServer := mockServer(validUser)
-		defer mockServer.Close()
-
-		c := &config{
-			AuthAPIURL: mockServer.URL,
-		}
-		ctx := context.Background()
-		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, err := discoverAuthenticator(ctx, c, token)
-		assert.NoError(t, err)
-		err = auth.Authenticate(ctx, "postgres", token)
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "not permitted to assume postgres")
-		defer mockServer.Close()
-	})
-
-	t.Run("fails when access has expired", func(t *testing.T) {
-		expiredAt := time.Now().Add(-1 * time.Minute).UnixMilli()
-		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "postgres", ExpiresAt: fmt.Sprintf("%d", expiredAt)}}}
-
-		mockServer := mockServer(validUser)
-		defer mockServer.Close()
-
-		c := &config{
-			AuthAPIURL: mockServer.URL,
-		}
-		ctx := context.Background()
-		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, err := discoverAuthenticator(ctx, c, token)
-		assert.NoError(t, err)
-		err = auth.Authenticate(ctx, "postgres", token)
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, fmt.Sprintf("access expired at %d", expiredAt))
-		defer mockServer.Close()
-	})
-
-	t.Run("passes when access has not yet expired", func(t *testing.T) {
-		expiredAt := time.Now().AddDate(1, 0, 0).UnixMilli() // 1 year from now
-		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "postgres", ExpiresAt: fmt.Sprintf("%d", expiredAt)}}}
-
-		mockServer := mockServer(validUser)
-		defer mockServer.Close()
-
-		c := &config{
-			AuthAPIURL: mockServer.URL,
-		}
-		ctx := context.Background()
-		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, err := discoverAuthenticator(ctx, c, token)
-		assert.NoError(t, err)
-		err = auth.Authenticate(ctx, "postgres", token)
-		assert.NoError(t, err)
-		defer mockServer.Close()
-	})
-
-	t.Run("fails for ip not in allowlisted range", func(t *testing.T) {
-		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "postgres", AllowedIps: []string{"10.8.0.1/24"}}}}
+		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Role: UserRole{Role: "supabase_read_only_user"}}
 
 		mockServer := mockServer(validUser)
 		defer mockServer.Close()
@@ -161,27 +103,7 @@ func TestAuthenticate_authApi(t *testing.T) {
 		assert.NoError(t, err)
 		err = auth.Authenticate(ctx, "postgres", token)
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "access not from an allowed IP")
-		defer mockServer.Close()
-	})
-
-	t.Run("succeeds from allow listed IP", func(t *testing.T) {
-		validUser := &UserPermissionSet{UserId: "99cf6d1d-7c39-46b4-bc58-688f6dd897ad", Roles: []UserRoles{{Role: "postgres", AllowedIps: []string{"10.8.0.1/24"}}}}
-
-		mockServer := mockServer(validUser)
-		defer mockServer.Close()
-
-		c := &config{
-			AuthAPIURL: mockServer.URL,
-		}
-		ctx := context.Background()
-		ctx = context.WithValue(ctx, rhostKey, "10.8.0.2")
-
-		token := "sbp_1112223336d4dddd54e60cfa33441499b182bbbb"
-		auth, err := discoverAuthenticator(ctx, c, token)
-		assert.NoError(t, err)
-		err = auth.Authenticate(ctx, "postgres", token)
-		assert.NoError(t, err)
+		assert.ErrorContains(t, err, "not permitted to assume postgres")
 		defer mockServer.Close()
 	})
 }

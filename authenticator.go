@@ -44,8 +44,12 @@ type UserRole struct {
 }
 
 type AllowedNetworks struct {
-	AllowedCidrs   []string `json:"allowed_cidrs,omitempty"`
-	AllowedCidrsV6 []string `json:"allowed_cidrs_v6,omitempty"`
+	AllowedCidrs   []CidrRange `json:"allowed_cidrs,omitempty"`
+	AllowedCidrsV6 []CidrRange `json:"allowed_cidrs_v6,omitempty"`
+}
+
+type CidrRange struct {
+	Cidr string `json:"cidr,omitempty"`
 }
 
 /* discoverAuthenticator uses the auth token to determine which authentication mechanism to use */

@@ -10,7 +10,7 @@
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        
+
         makeGatekeeper = { go ? pkgs.go }:
           let
             buildGoModule = pkgs.buildGoModule.override { inherit go; };
@@ -28,20 +28,20 @@
 
             buildPhase = ''
               runHook preBuild
-              go build -buildmode=c-shared -o pam_jwt_pg.so
+              go build -buildmode=c-shared -o pam_jit_pg.so
               runHook postBuild
             '';
 
             installPhase = ''
               runHook preInstall
               mkdir -p $out/lib/security
-              cp pam_jwt_pg.so $out/lib/security/
+              cp pam_jit_pg.so $out/lib/security/
               runHook postInstall
             '';
           };
       in {
         packages.default = makeGatekeeper { };
-        
+
         lib.makeGatekeeper = makeGatekeeper;
       });
 }

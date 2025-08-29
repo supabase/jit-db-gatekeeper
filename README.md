@@ -5,7 +5,7 @@ This allows for cross compiling to arm64 when using MacOS as a dev platform:
 ```bash
 docker build -t pam-builder .
 docker create --name extract pam-builder
-docker cp extract:/src/supa_jitdb_pam.so ./pam_jwt_pg.so
+docker cp extract:/src/supa_jitdb_pam.so ./pam_jit_pg.so
 docker rm extract
 ```
 
@@ -14,7 +14,7 @@ Build with nix (using docker as a standin here for a linux host):
 ```bash
 docker build -t nix-go-pam -f Dockerfile_nix .
 docker create --name temp nix-go-pam
-docker cp temp:/app/result/lib/security/pam_jwt_pg.so ./pam_jwt_pg_nix.so
+docker cp temp:/app/result/lib/security/pam_jit_pg.so ./pam_jwt_pg_nix.so
 docker rm temp
 ```
 
@@ -29,14 +29,14 @@ Copy the `.so` to the server. And add to the correct pam location, normally:
 In the case of `nix` builds, such as the Supabase image, it needs to go the nix store:
 
 ```
-cp pam_jwt_pg.so /nix/store/*-linux-pam-1.6.0/lib/security/
+cp pam_jit_pg.so /nix/store/*-linux-pam-1.6.0/lib/security/
 ```
 
 Next setup `/etc/pam.d/postgresql` with the following
 
 ```
-auth required pam_jwt_pg.so jwks=https://auth.supabase.green/auth/v1/.well-known/jwks.json mappings=/tmp/users.yaml
-account required pam_jwt_pg.so jwks=https://auth.supabase.green/auth/v1/.well-known/jwks.json mappings=/tmp/users.yaml
+auth required pam_jit_pg.so jwks=https://auth.supabase.green/auth/v1/.well-known/jwks.json mappings=/tmp/users.yaml
+account required pam_jit_pg.so jwks=https://auth.supabase.green/auth/v1/.well-known/jwks.json mappings=/tmp/users.yaml
 ```
 
 The `apiUrl` value should point to the URL of a valid api that accepts the PAT and/or JWT for authentication. The API should return a JSON struct with the roles the user associated to the PAT/JWT is allowed to assume:

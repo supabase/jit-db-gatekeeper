@@ -3,37 +3,45 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs }:
-    let
-      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
-      forAllSystems = f: builtins.listToAttrs (map (system: {
-        name = system;
-        value = f system;
-      }) systems);
-    in {
-      packages = forAllSystems (system:
-        let
-          pkgs = import nixpkgs { inherit system; };
-        in {
-          default = pkgs.stdenv.mkDerivation {
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+
+        makeGatekeeper = { go ? pkgs.go }:
+          let
+            buildGoModule = pkgs.buildGoModule.override { inherit go; };
+          in
+          buildGoModule {
             pname = "gatekeeper";
             version = "0.1.0";
             src = ./.;
 
-            buildInputs = [ pkgs.pam pkgs.gcc ];
+            vendorHash = "sha256-pdF+bhvZQwd2iSEHVtDAGihkYZGSaQaFdsF8MSrWuKQ=";
 
-            # Assuming your pam module source is pam_foo.c
+            buildInputs = [ pkgs.pam ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.darwin.apple_sdk.frameworks.Security
+            ];
+
             buildPhase = ''
-                go build -buildmode=c-shared -o pam_jwt_pg.so
+              runHook preBuild
+              go build -buildmode=c-shared -o pam_jit_pg.so
+              runHook postBuild
             '';
 
             installPhase = ''
+              runHook preInstall
               mkdir -p $out/lib/security
-              cp pam_jwt_pg.so $out/lib/security/
+              cp pam_jit_pg.so $out/lib/security/
+              runHook postInstall
             '';
           };
-        });
-    };
+      in {
+        packages.default = makeGatekeeper { };
+
+        lib.makeGatekeeper = makeGatekeeper;
+      });
 }

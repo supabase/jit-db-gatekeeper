@@ -1,5 +1,5 @@
 {
-  description = "JIT Database Gatekeeper - PAM module for JWT authentication with PostgreSQL";
+  description = "PAM module example";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -7,26 +7,41 @@
   };
 
   outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+    flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in
-      {
-        packages.default = pkgs.callPackage ./default.nix { };
+        pkgs = import nixpkgs { inherit system; };
 
-        packages.jit-db-gatekeeper = self.packages.${system}.default;
+        makeGatekeeper = { go ? pkgs.go }:
+          let
+            buildGoModule = pkgs.buildGoModule.override { inherit go; };
+          in
+          buildGoModule {
+            pname = "gatekeeper";
+            version = "0.1.0";
+            src = ./.;
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            go
-            pam
-            pkg-config
-          ];
+            vendorHash = "sha256-pdF+bhvZQwd2iSEHVtDAGihkYZGSaQaFdsF8MSrWuKQ=";
 
-          shellHook = ''
-            echo "JIT DB Gatekeeper development environment"
-            echo "Go version: $(go version)"
-          '';
-        };
+            buildInputs = [ pkgs.pam ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.darwin.apple_sdk.frameworks.Security
+            ];
+
+            buildPhase = ''
+              runHook preBuild
+              go build -buildmode=c-shared -o pam_jit_pg.so
+              runHook postBuild
+            '';
+
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out/lib/security
+              cp pam_jit_pg.so $out/lib/security/
+              runHook postInstall
+            '';
+          };
+      in {
+        packages.default = makeGatekeeper { };
+
+        lib.makeGatekeeper = makeGatekeeper;
       });
 }

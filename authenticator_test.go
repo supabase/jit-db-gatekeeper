@@ -37,6 +37,20 @@ func TestAuthenticate_Discover(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, &authenticator{AuthMethod: AuthPassword}, auth)
 	})
+
+	t.Run("short token supported", func(t *testing.T) {
+		token := "sbp"
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		assert.Equal(t, &authenticator{AuthMethod: AuthPassword}, auth)
+	})
+
+	t.Run("bad PAT treated as password", func(t *testing.T) {
+		token := "sbp_1112223336d4dddd54e6"
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		assert.Equal(t, &authenticator{AuthMethod: AuthPassword}, auth)
+	})
 }
 
 func mockServer(resp *UserPermissionSet) *httptest.Server {

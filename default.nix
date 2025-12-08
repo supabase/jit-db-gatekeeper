@@ -2,11 +2,11 @@
 
 pkgs.buildGoModule {
   pname = "jit-db-gatekeeper";
-  version = "0.1.0";
+  version = "1.0.0";
 
   src = ./.;
 
-  vendorHash = "sha256-pdF+bhvZQwd2iSEHVtDAGihkYZGSaQaFdsF8MSrWuKQ=";
+  vendorHash = "sha256-G9x2TARSJMn30R6ZOlsggxEtn5t2ezWz1YtkLXdYiAE=";
 
   nativeBuildInputs = with pkgs; [
     pkg-config

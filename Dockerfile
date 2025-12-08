@@ -28,4 +28,4 @@ RUN go mod tidy
 
 RUN ls /usr/include/security/pam_modules.h
 # Build the shared object using musl-gcc to get static libc linking as much as possible
-RUN go build -buildmode=c-shared -o supa_jitdb_pam.so
+RUN go build -buildmode=c-shared -o pam_jit_pg.so

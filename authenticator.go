@@ -82,13 +82,19 @@ func (a *authenticator) Authenticate(ctx context.Context, user, token string) er
 
 // looksLikePAT simply checks if a supplied token has the supabase PAT prefix
 func looksLikePAT(token string) bool {
-	return token[:4] == "sbp_"
+	return len(token) == 44 && token[:4] == "sbp_"
 }
 
 // looksLikeJWT checks if a token has the format of a JWT. It does not validate the JWT
 func looksLikeJWT(token string) bool {
 	parts := strings.Split(token, ".")
-	return len(parts) == 3 && parts[0][:3] == "eyJ" && parts[1][:3] == "eyJ"
+	if len(parts) != 3 {
+		return false
+	}
+	hasPrefix := func(s string) bool {
+		return len(s) >= 3 && s[:3] == "eyJ"
+	}
+	return hasPrefix(parts[0]) && hasPrefix(parts[1])
 }
 
 /* authPassword will attempt to auth  to the local postgres database */

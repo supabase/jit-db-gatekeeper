@@ -6,7 +6,7 @@ pkgs.buildGoModule {
 
   src = ./.;
 
-  vendorHash = "sha256-G9x2TARSJMn30R6ZOlsggxEtn5t2ezWz1YtkLXdYiAE=";
+  vendorHash = "sha256-gffPp1tNVzWusk5XNsYLkn9x+TD6sELlkik9m+ejNPY=";
 
   nativeBuildInputs = with pkgs; [
     pkg-config

@@ -16,7 +16,7 @@
             buildGoModule = pkgs.buildGoModule.override { inherit go; };
           in
           buildGoModule {
-            pname = "gatekeeper";
+            pname = "jit-db-gatekeeper";
             version = "1.0.0";
             src = ./.;
 

@@ -22,9 +22,7 @@
 
             vendorHash = "sha256-gffPp1tNVzWusk5XNsYLkn9x+TD6sELlkik9m+ejNPY=";
 
-            buildInputs = [ pkgs.pam ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-              pkgs.darwin.apple_sdk.frameworks.Security
-            ];
+            buildInputs = [ pkgs.pam ];
 
             buildPhase = ''
               runHook preBuild

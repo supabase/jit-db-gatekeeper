@@ -25,6 +25,12 @@ pkgs.buildGoModule {
     runHook postBuild
   '';
 
+  checkPhase = ''
+      runHook preCheck
+      go test -v ./...
+      runHook postCheck
+  '';
+
   installPhase = ''
     runHook preInstall
     mkdir -p $out/lib/security

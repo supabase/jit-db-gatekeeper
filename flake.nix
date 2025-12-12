@@ -17,10 +17,10 @@
           in
           buildGoModule {
             pname = "gatekeeper";
-            version = "0.1.0";
+            version = "1.0.0";
             src = ./.;
 
-            vendorHash = "sha256-pdF+bhvZQwd2iSEHVtDAGihkYZGSaQaFdsF8MSrWuKQ=";
+            vendorHash = "sha256-G9x2TARSJMn30R6ZOlsggxEtn5t2ezWz1YtkLXdYiAE=";
 
             buildInputs = [ pkgs.pam ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
               pkgs.darwin.apple_sdk.frameworks.Security
@@ -30,6 +30,12 @@
               runHook preBuild
               go build -buildmode=c-shared -o pam_jit_pg.so
               runHook postBuild
+            '';
+
+            checkPhase = ''
+                runHook preCheck
+                go test -v ./...
+                runHook postCheck
             '';
 
             installPhase = ''

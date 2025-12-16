@@ -139,6 +139,7 @@ func authApi(ctx context.Context, apiUrl, username, token string) error {
 		// set auth for API server, only bearer support for now
 		req.Header.Add("Authorization", "Bearer "+token)
 		req.Header.Add("Accept", "application/json")
+		req.Header.Add("Content-Type", "application/json")
 
 		resp, err := client.Do(req)
 		if err != nil {

@@ -5,11 +5,11 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-    workflow_dispatch:
-      inputs:
-        tag:
-          description: 'Version tag (e.g. v1.0.0)'
-          required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag (e.g. v1.0.0)'
+        required: true
 
 permissions:
   id-token: write # This is required for requesting the JWT from AWS
@@ -20,7 +20,7 @@ jobs:
     name: build release artifacts
     runs-on: ubuntu-24.04-arm
     outputs:
-      upload_url: ${{ steps.create-release.outputs.upload_url }}
+      tag: ${{ steps.version.outputs.tag }}
 
     steps:
       - name: Resolve version
@@ -37,8 +37,8 @@ jobs:
 
       - name: build artifacts
         uses: cachix/install-nix-action@4e002c8ec80594ecd40e759629461e26c8abed15 # v31.9.0
-      - run: nix build
       - run: nix flake check
+      - run: nix build
 
       - name: Get asset name
         run: |
@@ -66,7 +66,7 @@ jobs:
 
       - name: Bundle build artifacts
         run: |
-          tar -cJf pam_jit_pg-${{ needs.build.outputs.tag }}}-arm64.tar.xz *.so
+          tar -cJf pam_jit_pg-${{ needs.build.outputs.tag }}-arm64.tar.xz *.so
 
       - name: GitHub OIDC Auth
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1

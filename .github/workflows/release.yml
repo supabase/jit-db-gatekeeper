@@ -4,11 +4,11 @@ on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Version tag (e.g. v1.0.0)'
+        description: "Version tag (e.g. v1.0.0)"
         required: true
 
 permissions:
@@ -49,7 +49,7 @@ jobs:
           echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
 
       - name: Upload build artifacts for bundling
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ env.ASSET_NAME }}
           path: ./${{ env.ASSET_NAME }}
@@ -63,12 +63,32 @@ jobs:
       - name: Download build artifacts for bundling
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          pattern: '*.so'
+          pattern: "*.so"
           merge-multiple: true
 
       - name: Bundle build artifacts
+        id: bundle
         run: |
-          tar -cJf pam_jit_pg-${{ needs.build.outputs.tag }}-arm64.tar.xz *.so
+          TARBALL="pam_jit_pg-${{ needs.build.outputs.tag }}-arm64.tar.xz"
+
+          tar -cJf "${TARBALL}" *.so
+
+          SHA256=$(sha256sum "$TARBALL" | awk '{ print $1 }')
+
+          echo "## Release Checksum" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "SHA256 ($TARBALL) = $SHA256" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          echo "::notice title=SHA256::SHA256 ($TARBALL) = $SHA256"
+          echo "tarball=${TARBALL}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: release
+          path: ${{ steps.bundle.outputs.tarball }}
 
       - name: GitHub OIDC Auth
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1

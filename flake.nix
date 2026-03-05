@@ -17,7 +17,7 @@
           in
           buildGoModule {
             pname = "jit-db-gatekeeper";
-            version = "1.0.1";
+            version = "1.0.2";
             src = ./.;
 
             vendorHash = null;

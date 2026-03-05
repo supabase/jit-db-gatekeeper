@@ -32,24 +32,14 @@ type AuthZRequest struct {
 	Role  string `json:"role"`
 	Rhost string `json:"rhost"`
 }
+
 type UserPermissionSet struct {
 	UserId string   `json:"user_id"`
 	Role   UserRole `json:"user_role"`
 }
 
 type UserRole struct {
-	Role            string          `json:"role"`
-	ExpiresAt       string          `json:"expires_at,omitempty"`
-	AllowedNetworks AllowedNetworks `json:"allowed_networks"`
-}
-
-type AllowedNetworks struct {
-	AllowedCidrs   []CidrRange `json:"allowed_cidrs,omitempty"`
-	AllowedCidrsV6 []CidrRange `json:"allowed_cidrs_v6,omitempty"`
-}
-
-type CidrRange struct {
-	Cidr string `json:"cidr,omitempty"`
+	Role string `json:"role"`
 }
 
 /* discoverAuthenticator uses the auth token to determine which authentication mechanism to use */

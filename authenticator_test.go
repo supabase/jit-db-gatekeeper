@@ -24,6 +24,13 @@ func TestAuthenticate_Discover(t *testing.T) {
 		assert.Equal(t, &authenticator{AuthMethod: AuthPat, ApiUrl: c.AuthAPIURL}, auth)
 	})
 
+	t.Run("discovers scoped PAT token for auth", func(t *testing.T) {
+		token := "supabase_pat_8888bbbbaaaa8888aaaaddddbbbbeeee9999accc"
+		auth, err := discoverAuthenticator(ctx, c, token)
+		assert.NoError(t, err)
+		assert.Equal(t, &authenticator{AuthMethod: AuthPat, ApiUrl: c.AuthAPIURL}, auth)
+	})
+
 	t.Run("discovers oauth PAT token for auth", func(t *testing.T) {
 		token := "sbp_oauth_1112223336d4dddd54e60cfa33441499b182bbbb"
 		auth, err := discoverAuthenticator(ctx, c, token)

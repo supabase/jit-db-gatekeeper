@@ -54,10 +54,49 @@ jobs:
           name: ${{ env.ASSET_NAME }}
           path: ./${{ env.ASSET_NAME }}
 
+  build-amd64:
+    name: build release artifacts (amd64)
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ steps.version.outputs.tag }}
+
+      - name: build artifacts
+        uses: cachix/install-nix-action@4e002c8ec80594ecd40e759629461e26c8abed15 # v31.9.0
+      - run: nix flake check
+      - run: nix build
+
+      - name: Get asset name
+        run: |
+          ASSET_NAME=pam_jit_pg-${{ steps.version.outputs.tag }}-amd64-linux-gnu.so
+          cp result/lib/security/pam_jit_pg.so ./$ASSET_NAME
+          echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
+
+      - name: Upload build artifacts for bundling
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ env.ASSET_NAME }}
+          path: ./${{ env.ASSET_NAME }}
+
   bundle-build-artifacts:
     name: Bundle build artifacts
     needs:
       - build
+      - build-amd64
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Download build artifacts for bundling
@@ -69,26 +108,33 @@ jobs:
       - name: Bundle build artifacts
         id: bundle
         run: |
-          TARBALL="pam_jit_pg-${{ needs.build.outputs.tag }}-arm64.tar.xz"
+          TAG="${{ needs.build.outputs.tag }}"
+          TARBALL_ARM64="pam_jit_pg-${TAG}-arm64.tar.xz"
+          TARBALL_AMD64="pam_jit_pg-${TAG}-amd64.tar.xz"
 
-          tar -cJf "${TARBALL}" *.so
+          tar -cJf "${TARBALL_ARM64}" *arm64*.so
+          tar -cJf "${TARBALL_AMD64}" *amd64*.so
 
-          SHA256=$(sha256sum "$TARBALL" | awk '{ print $1 }')
-
-          echo "## Release Checksum" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Checksums" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "SHA256 ($TARBALL) = $SHA256" >> $GITHUB_STEP_SUMMARY
+          for TARBALL in "${TARBALL_ARM64}" "${TARBALL_AMD64}"; do
+            SHA256=$(sha256sum "$TARBALL" | awk '{ print $1 }')
+            echo "SHA256 ($TARBALL) = $SHA256" >> $GITHUB_STEP_SUMMARY
+            echo "::notice title=SHA256::SHA256 ($TARBALL) = $SHA256"
+          done
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-          echo "::notice title=SHA256::SHA256 ($TARBALL) = $SHA256"
-          echo "tarball=${TARBALL}" >> $GITHUB_OUTPUT
+          echo "tarball_arm64=${TARBALL_ARM64}" >> $GITHUB_OUTPUT
+          echo "tarball_amd64=${TARBALL_AMD64}" >> $GITHUB_OUTPUT
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: release
-          path: ${{ steps.bundle.outputs.tarball }}
+          path: |
+            ${{ steps.bundle.outputs.tarball_arm64 }}
+            ${{ steps.bundle.outputs.tarball_amd64 }}
 
       - name: GitHub OIDC Auth
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
@@ -106,6 +152,7 @@ jobs:
           role-session-name: upload-assets
           role-chaining: true
 
-      - name: Upload bundle to shared services bucket
+      - name: Upload bundles to shared services bucket
         run: |
-          aws s3 cp --no-progress ${{ steps.bundle.outputs.tarball }} s3://${{ secrets.SHARED_SERVICES_BUCKET }}/pam_jit_pg/${{ steps.bundle.outputs.tarball }}
+          aws s3 cp --no-progress ${{ steps.bundle.outputs.tarball_arm64 }} s3://${{ secrets.SHARED_SERVICES_BUCKET }}/pam_jit_pg/${{ steps.bundle.outputs.tarball_arm64 }}
+          aws s3 cp --no-progress ${{ steps.bundle.outputs.tarball_amd64 }} s3://${{ secrets.SHARED_SERVICES_BUCKET }}/pam_jit_pg/${{ steps.bundle.outputs.tarball_amd64 }}

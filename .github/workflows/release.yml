@@ -17,8 +17,15 @@ permissions:
 
 jobs:
   build:
-    name: build release artifacts
-    runs-on: ubuntu-24.04-arm
+    name: build release artifacts (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - arch: amd64
+            runner: ubuntu-24.04
     outputs:
       tag: ${{ steps.version.outputs.tag }}
 
@@ -44,45 +51,7 @@ jobs:
 
       - name: Get asset name
         run: |
-          ASSET_NAME=pam_jit_pg-${{ steps.version.outputs.tag }}-arm64-linux-gnu.so
-          cp result/lib/security/pam_jit_pg.so ./$ASSET_NAME
-          echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
-
-      - name: Upload build artifacts for bundling
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: ${{ env.ASSET_NAME }}
-          path: ./${{ env.ASSET_NAME }}
-
-  build-amd64:
-    name: build release artifacts (amd64)
-    runs-on: ubuntu-24.04
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
-
-    steps:
-      - name: Resolve version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ steps.version.outputs.tag }}
-
-      - name: build artifacts
-        uses: cachix/install-nix-action@4e002c8ec80594ecd40e759629461e26c8abed15 # v31.9.0
-      - run: nix flake check
-      - run: nix build
-
-      - name: Get asset name
-        run: |
-          ASSET_NAME=pam_jit_pg-${{ steps.version.outputs.tag }}-amd64-linux-gnu.so
+          ASSET_NAME=pam_jit_pg-${{ steps.version.outputs.tag }}-${{ matrix.arch }}-linux-gnu.so
           cp result/lib/security/pam_jit_pg.so ./$ASSET_NAME
           echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
 
@@ -94,9 +63,7 @@ jobs:
 
   bundle-build-artifacts:
     name: Bundle build artifacts
-    needs:
-      - build
-      - build-amd64
+    needs: build
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Download build artifacts for bundling

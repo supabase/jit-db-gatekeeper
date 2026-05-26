@@ -73,7 +73,7 @@ func (a *authenticator) Authenticate(ctx context.Context, user, token string) er
 // looksLikePAT simply checks if a supplied token has the supabase PAT prefix
 // sbp_ has length 44 and sbp_oauth is 50
 func looksLikePAT(token string) bool {
-	return len(token) >= 44 && token[:4] == "sbp_"
+	return len(token) >= 44 && (token[:4] == "sbp_" || token[:13] == "supabase_pat_")
 }
 
 // looksLikeJWT checks if a token has the format of a JWT. It does not validate the JWT

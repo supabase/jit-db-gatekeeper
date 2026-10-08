@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 type AuthMethod string
@@ -88,17 +88,37 @@ func looksLikeJWT(token string) bool {
 	return hasPrefix(parts[0]) && hasPrefix(parts[1])
 }
 
+// authConfig builds the connection config for authPassword
+func authConfig(username, password string) (pq.Config, error) {
+	// an empty password makes lib/pq fall back to .pgpass
+	if password == "" {
+		return pq.Config{}, fmt.Errorf("empty password")
+	}
+	// only constant, trusted options go through the DSN parser
+	cfg, err := pq.NewConfig("host=127.0.0.1 dbname=authdbsupabase sslmode=disable")
+	if err != nil {
+		return pq.Config{}, err
+	}
+	cfg.User = username
+	cfg.Password = password
+	return cfg, nil
+}
+
 /* authPassword will attempt to auth  to the local postgres database */
 func authPassword(ctx context.Context, username, password string) error {
-	connStr := fmt.Sprintf("user=%s password=%s dbname=authdbsupabase sslmode=disable host=127.0.0.1", username, password)
-
-	db, err := sql.Open("postgres", connStr)
+	cfg, err := authConfig(username, password)
 	if err != nil {
 		return err
 	}
+	connector, err := pq.NewConnectorConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	db := sql.OpenDB(connector)
 	defer db.Close()
 
-	err = db.Ping()
+	err = db.PingContext(ctx)
 	if err != nil {
 		// valid username + password and permitted to login
 		if strings.Contains(err.Error(), "database \"authdbsupabase\" does not exist") {

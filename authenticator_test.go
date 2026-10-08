@@ -135,3 +135,69 @@ func TestAuthenticate_authApi(t *testing.T) {
 		defer mockServer.Close()
 	})
 }
+
+func TestAuthConfig(t *testing.T) {
+	t.Run("rejects empty password", func(t *testing.T) {
+		_, err := authConfig("postgres", "")
+		assert.Error(t, err)
+	})
+
+	tests := []struct {
+		name     string
+		user     string
+		password string
+	}{
+		{
+			name:     "plain credentials",
+			user:     "alice",
+			password: "plainpassword",
+		},
+		{
+			name:     "password escapes spaces",
+			user:     "alice",
+			password: "x host=host1.example port=1",
+		},
+		{
+			name:     "password does not overrides user and password",
+			user:     "alice",
+			password: "x user=postgres password=y",
+		},
+		{
+			name:     "username does not override password and host",
+			user:     "alice password=y host=host1.example",
+			password: "plainpassword",
+		},
+		{
+			name:     "password escapes single quotes",
+			user:     "alice",
+			password: "x' host='host2.example",
+		},
+		{
+			name:     "username escapes single quotes",
+			user:     "alice' host='host2.example",
+			password: "plainpassword",
+		},
+		{
+			name:     "password escapes quote with backslash",
+			user:     "alice",
+			password: `x\' user=\'postgres`,
+		},
+		{
+			name:     "password escapes space with backslash",
+			user:     "alice",
+			password: `x\ host=host2.example`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := authConfig(tt.user, tt.password)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.user, cfg.User)
+			assert.Equal(t, tt.password, cfg.Password)
+			assert.Equal(t, "127.0.0.1", cfg.Host)
+			assert.Equal(t, uint16(5432), cfg.Port)
+			assert.Equal(t, "authdbsupabase", cfg.Database)
+			assert.Empty(t, cfg.Multi)
+		})
+	}
+}
